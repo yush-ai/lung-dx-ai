@@ -22,64 +22,37 @@ export default function Detail() {
   useEffect(() => {
     const loadFiles = async () => {
       try {
-        // 从 sessionStorage 获取文件基本信息
-        const storedFilesInfo = sessionStorage.getItem('uploadedFilesInfo');
-        if (!storedFilesInfo) {
+        // 从 sessionStorage 获取文件数据
+        const storedFiles = sessionStorage.getItem('uploadedFiles');
+        if (!storedFiles) {
           console.log('没有找到文件信息');
           return;
         }
         
-        const filesInfo = JSON.parse(storedFilesInfo);
+        const filesData = JSON.parse(storedFiles);
         
-        // 从 IndexedDB 获取文件数据
-        const dbName = 'FileStorage';
-        const storeName = 'files';
-        
-        const request = indexedDB.open(dbName, 1);
-        
-        request.onsuccess = async (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          const transaction = db.transaction([storeName], 'readonly');
-          const store = transaction.objectStore(storeName);
-          
-          const fileDataPromises = filesInfo.map(async (fileInfo: any) => {
-            return new Promise<FileData>((resolve, reject) => {
-              const getRequest = store.get(fileInfo.id);
-              
-              getRequest.onsuccess = () => {
-                const result = getRequest.result;
-                if (result) {
-                  // 从 ArrayBuffer 创建 Blob 和 URL
-                  const blob = new Blob([result.data], { type: result.type });
-                  const url = URL.createObjectURL(blob);
-                  
-                  resolve({
-                    id: result.id,
-                    name: result.name,
-                    size: result.size,
-                    type: result.type,
-                    url: url
-                  });
-                } else {
-                  reject(new Error(`文件 ${fileInfo.id} 未找到`));
-                }
-              };
-              
-              getRequest.onerror = () => reject(getRequest.error);
-            });
-          });
-          
-          try {
-            const loadedFiles = await Promise.all(fileDataPromises);
-            setUploadedFiles(loadedFiles);
-          } catch (error) {
-            console.error('加载文件失败:', error);
+        // 将 base64 数据转换为 Blob URL
+        const loadedFiles = filesData.map((fileData: any) => {
+          // 将 base64 转换为 Blob
+          const byteCharacters = atob(fileData.data.split(',')[1]);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
           }
-        };
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: fileData.type });
+          const url = URL.createObjectURL(blob);
+          
+          return {
+            id: fileData.id,
+            name: fileData.name,
+            size: fileData.size,
+            type: fileData.type,
+            url: url
+          };
+        });
         
-        request.onerror = () => {
-          console.error('打开 IndexedDB 失败');
-        };
+        setUploadedFiles(loadedFiles);
         
       } catch (error) {
         console.error('加载文件数据失败:', error);
