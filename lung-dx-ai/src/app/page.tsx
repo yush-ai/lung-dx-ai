@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+// import Link from "next/link"; // 注释掉 Next.js Link 组件以避免 SSR 问题
 import { useState, useRef } from "react";
 
 export default function Home() {

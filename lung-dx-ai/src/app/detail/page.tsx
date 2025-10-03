@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+// import Link from "next/link"; // 注释掉 Next.js Link 组件以避免 SSR 问题
 import { useState, useEffect } from "react";
 
 interface FileData {
@@ -168,12 +168,12 @@ export default function Detail() {
           <div className="lg:col-span-2 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">AI 肺结节分析</h2>
-              <Link href="/" className="cursor-pointer">
+              <a href="/" className="cursor-pointer">
                 <button className="flex items-center gap-2 px-4 py-2 rounded bg-[#f6f7f8] dark:bg-[#101a22] border border-[#dbe1e6] dark:border-[#2d3e4e] text-sm font-medium hover:bg-[#138aec]/10 dark:hover:bg-[#138aec]/20 transition-colors cursor-pointer">
                   <span className="text-base">←</span>
                   返回上传
                 </button>
-              </Link>
+              </a>
             </div>
             
             <div className="rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden relative h-[600px] flex items-center justify-center">
