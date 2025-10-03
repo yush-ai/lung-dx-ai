@@ -1,0 +1,53 @@
+=====================================
+AI 肺部结节辅助诊断系统 - 配置说明
+=====================================
+
+🚀 快速开始（3步）
+
+1️⃣ 获取 API Key
+   访问: https://cloud.siliconflow.cn
+   注册并在控制台获取 API Key
+
+2️⃣ 配置环境变量
+   方式一：运行自动配置脚本
+   $ chmod +x setup-ai.sh
+   $ ./setup-ai.sh
+   
+   方式二：手动创建 .env.local 文件
+   在项目根目录创建文件，内容如下：
+   SILICONFLOW_API_KEY=你的API密钥
+
+3️⃣ 启动项目
+   $ npm install     # 安装依赖
+   $ npm run dev     # 启动开发服务器
+   
+   访问: http://localhost:3000
+
+=====================================
+
+✅ 验证配置
+$ node test-ai-config.js
+
+📖 详细文档
+- 快速开始: QUICK_START.md
+- 配置指南: AI_SETUP.md
+- 完整说明: README.md
+
+⚠️ 重要提示
+- .env.local 文件包含敏感信息，不要提交到 Git
+- API Key 需要保密，不要分享给他人
+- 本系统仅供辅助诊断，不能替代专业医生
+
+💡 功能说明
+1. 上传肺部医学影像（CT/X光）
+2. AI 自动分析图片
+3. 生成专业诊断建议
+4. 查看详细结节数据
+
+🆘 需要帮助？
+- 查看文档: AI_SETUP.md
+- 运行测试: node test-ai-config.js
+- 提交问题: GitHub Issues
+
+=====================================
+

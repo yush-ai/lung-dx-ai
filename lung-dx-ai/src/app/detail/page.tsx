@@ -17,8 +17,9 @@ export default function Detail() {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isClient, setIsClient] = useState(false);
+  const [diagnosisText, setDiagnosisText] = useState("正在加载 AI 诊断结果...");
 
-  const diagnosisText = "综合风险评分为高。建议进行进一步的活检或 PET-CT 检查以确认恶性肿瘤。鉴于其中一个结节的恶性程度较高，建议立即会诊。";
+  const defaultDiagnosisText = "综合风险评分为高。建议进行进一步的活检或 PET-CT 检查以确认恶性肿瘤。鉴于其中一个结节的恶性程度较高，建议立即会诊。";
 
   useEffect(() => {
     setIsClient(true);
@@ -33,7 +34,25 @@ export default function Detail() {
         const storedFiles = sessionStorage.getItem('uploadedFiles');
         if (!storedFiles) {
           console.log('没有找到文件信息');
+          setDiagnosisText(defaultDiagnosisText);
           return;
+        }
+        
+        // 加载 AI 诊断结果
+        const aiDiagnosis = sessionStorage.getItem('aiDiagnosis');
+        console.log('🔍 检查 sessionStorage:', {
+          hasAiDiagnosis: !!aiDiagnosis,
+          diagnosisLength: aiDiagnosis?.length || 0,
+          preview: aiDiagnosis?.substring(0, 100) + '...'
+        });
+        
+        if (aiDiagnosis) {
+          setDiagnosisText(aiDiagnosis);
+          console.log('✅ 已加载 AI 诊断结果');
+          console.log('📝 诊断文本:', aiDiagnosis);
+        } else {
+          setDiagnosisText(defaultDiagnosisText);
+          console.log('⚠️ 未找到 AI 诊断，使用默认文本');
         }
         
         const filesData = JSON.parse(storedFiles);
@@ -276,7 +295,7 @@ export default function Detail() {
             <div className="flex flex-col gap-4">
               <h3 className="text-xl font-bold">诊断建议</h3>
               <div className="p-4 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                <p className="text-sm">综合风险评分为 <span className="font-bold text-red-600 dark:text-red-400">高</span>。建议进行进一步的活检或 PET-CT 检查以确认恶性肿瘤。鉴于其中一个结节的恶性程度较高，建议立即会诊。</p>
+                <p className="text-sm whitespace-pre-wrap">{diagnosisText}</p>
               </div>
               <button 
                 onClick={copyDiagnosis}

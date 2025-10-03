@@ -6,6 +6,7 @@ import { useState, useRef } from "react";
 export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
@@ -147,14 +148,16 @@ export default function Home() {
             
             <div className="flex justify-center mt-6">
               <button 
-                disabled={files.length === 0}
+                disabled={files.length === 0 || isAnalyzing}
                 onClick={async () => {
                   if (files.length > 0) {
                     try {
                       // 检查是否在客户端环境
                       if (typeof window === 'undefined') return;
                       
-                      // 将文件转换为 base64 并存储到 sessionStorage
+                      setIsAnalyzing(true);
+                      
+                      // 将文件转换为 base64
                       const fileDataArray = await Promise.all(
                         files.map(async (file, index) => {
                           return new Promise<any>((resolve, reject) => {
@@ -174,25 +177,78 @@ export default function Home() {
                         })
                       );
                       
-                      // 存储到 sessionStorage
+                      // 存储文件数据到 sessionStorage
                       sessionStorage.setItem('uploadedFiles', JSON.stringify(fileDataArray));
+                      
+                      // 只分析第一张图片（可以根据需要修改为批量分析）
+                      const firstImageFile = fileDataArray.find(f => f.type.startsWith('image/'));
+                      
+                      if (firstImageFile) {
+                        // 调用 AI 分析 API
+                        const response = await fetch('/api/analyze', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            imageData: firstImageFile.data
+                          })
+                        });
+                        
+                        if (!response.ok) {
+                          throw new Error('AI 分析失败');
+                        }
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                          // 存储 AI 诊断结果
+                          sessionStorage.setItem('aiDiagnosis', result.diagnosis);
+                          
+                          // 在控制台显示 AI 诊断结果
+                          console.log('\n%c========== AI 诊断结果 ==========', 'color: #138aec; font-weight: bold; font-size: 14px;');
+                          console.log('%c' + result.diagnosis, 'color: #2d3748; font-size: 13px; line-height: 1.6;');
+                          console.log('%c================================', 'color: #138aec; font-weight: bold;');
+                          
+                          // 显示 token 使用情况
+                          if (result.usage) {
+                            console.log('\n%cToken 使用情况:', 'color: #48bb78; font-weight: bold;');
+                            console.log(`提示词: ${result.usage.prompt_tokens} | 生成: ${result.usage.completion_tokens} | 总计: ${result.usage.total_tokens}`);
+                          }
+                          console.log('');
+                        } else {
+                          console.error('AI 分析失败:', result.error);
+                          // 即使 AI 分析失败，也继续跳转，使用默认诊断文本
+                        }
+                      }
                       
                       // 跳转到详情页
                       window.location.href = '/detail';
                       
                     } catch (error) {
-                      console.error('文件存储错误:', error);
-                      alert('存储文件失败，请重试');
+                      console.error('处理错误:', error);
+                      alert('分析失败，请重试。如果问题持续，请检查 API 配置。');
+                      setIsAnalyzing(false);
                     }
                   }
                 }}
-                className={`w-full max-w-xs flex items-center justify-center gap-2 rounded-lg h-12 px-6 text-base font-bold leading-normal transition-colors cursor-pointer ${
-                  files.length > 0 
-                    ? 'bg-[#138aec] text-white hover:bg-opacity-90' 
+                className={`w-full max-w-xs flex items-center justify-center gap-2 rounded-lg h-12 px-6 text-base font-bold leading-normal transition-colors ${
+                  files.length > 0 && !isAnalyzing
+                    ? 'bg-[#138aec] text-white hover:bg-opacity-90 cursor-pointer' 
                     : 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed'
                 }`}
               >
-                <span className="truncate">开始分析 {files.length > 0 ? `(${files.length} 个文件)` : ''}</span>
+                {isAnalyzing ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="truncate">AI 分析中...</span>
+                  </>
+                ) : (
+                  <span className="truncate">开始 AI 分析 {files.length > 0 ? `(${files.length} 个文件)` : ''}</span>
+                )}
               </button>
             </div>
           </div>
