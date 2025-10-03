@@ -151,6 +151,9 @@ export default function Home() {
                 onClick={async () => {
                   if (files.length > 0) {
                     try {
+                      // 检查是否在客户端环境
+                      if (typeof window === 'undefined') return;
+                      
                       // 将文件转换为 base64 并存储到 sessionStorage
                       const fileDataArray = await Promise.all(
                         files.map(async (file, index) => {

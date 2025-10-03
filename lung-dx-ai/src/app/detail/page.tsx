@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 
 interface FileData {
   id: number;
@@ -16,10 +16,17 @@ export default function Detail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isClient, setIsClient] = useState(false);
 
   const diagnosisText = "综合风险评分为高。建议进行进一步的活检或 PET-CT 检查以确认恶性肿瘤。鉴于其中一个结节的恶性程度较高，建议立即会诊。";
 
+  useLayoutEffect(() => {
+    setIsClient(true);
+  }, []);
+
   useEffect(() => {
+    if (!isClient) return;
+    
     const loadFiles = async () => {
       try {
         // 从 sessionStorage 获取文件数据
@@ -64,17 +71,30 @@ export default function Detail() {
     // 清理函数：在组件卸载时释放 blob URLs
     return () => {
       uploadedFiles.forEach(file => {
-        if (file.url.startsWith('blob:')) {
+        if (file.url && file.url.startsWith('blob:')) {
           URL.revokeObjectURL(file.url);
         }
       });
     };
-  }, []);
+  }, [isClient]);
 
   const copyDiagnosis = async () => {
     try {
-      await navigator.clipboard.writeText(diagnosisText);
-      alert("诊断建议已复制到剪贴板");
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(diagnosisText);
+        alert("诊断建议已复制到剪贴板");
+      } else if (typeof document !== 'undefined') {
+        // 降级方案：使用传统的复制方法
+        const textArea = document.createElement('textarea');
+        textArea.value = diagnosisText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert("诊断建议已复制到剪贴板");
+      } else {
+        alert("复制功能不可用");
+      }
     } catch (err) {
       console.error("复制失败:", err);
       alert("复制失败，请手动复制");
@@ -109,6 +129,19 @@ export default function Detail() {
   };
 
   const currentFile = uploadedFiles[currentImageIndex];
+  
+  // 在客户端加载完成前显示加载状态
+  if (!isClient) {
+    return (
+      <div className="bg-[#f6f7f8] dark:bg-[#101a22] font-[Inter,sans-serif] text-[#111518] dark:text-[#e8eef3] min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🫁</div>
+          <p className="text-lg font-medium">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="bg-[#f6f7f8] dark:bg-[#101a22] font-[Inter,sans-serif] text-[#111518] dark:text-[#e8eef3]">
       <div className="flex flex-col min-h-screen">
