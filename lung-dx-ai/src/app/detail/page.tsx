@@ -206,13 +206,13 @@ export default function Detail() {
               ) : (
                 <div className="text-center text-gray-500 dark:text-gray-400">
                   <div className="text-6xl mb-4">🫁</div>
-                  <p className="text-lg font-medium">暂无图像数据</p>
-                  <p className="text-sm mt-2">请先上传医学影像文件</p>
+                  <p className="text-lg font-medium">没有找到图片</p>
+                  <p className="text-sm mt-2">请先上传图片文件</p>
                 </div>
               )}
               
-              {/* 控制按钮 */}
-              <div className="absolute bottom-4 left-4 flex gap-2">
+              {/* 缩放控制按钮 */}
+              <div className="absolute bottom-4 right-4 flex flex-col gap-2">
                 <button 
                   onClick={handleZoomIn}
                   className="flex items-center justify-center size-10 rounded bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 shadow-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer"
