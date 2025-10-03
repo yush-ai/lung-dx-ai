@@ -151,80 +151,31 @@ export default function Home() {
                 onClick={async () => {
                   if (files.length > 0) {
                     try {
-                      // 使用 IndexedDB 存储文件数据
-                      const dbName = 'FileStorage';
-                      const storeName = 'files';
-                      
-                      // 打开 IndexedDB
-                      const request = indexedDB.open(dbName, 1);
-                      
-                      request.onupgradeneeded = (event) => {
-                        const db = (event.target as IDBOpenDBRequest).result;
-                        if (!db.objectStoreNames.contains(storeName)) {
-                          db.createObjectStore(storeName, { keyPath: 'id' });
-                        }
-                      };
-                      
-                      request.onsuccess = async (event) => {
-                        const db = (event.target as IDBOpenDBRequest).result;
-                        
-                        try {
-                          // 先将所有文件转换为 ArrayBuffer
-                          const fileDataArray = await Promise.all(
-                            files.map(async (file, index) => {
-                              const arrayBuffer = await file.arrayBuffer();
-                              return {
+                      // 将文件转换为 base64 并存储到 sessionStorage
+                      const fileDataArray = await Promise.all(
+                        files.map(async (file, index) => {
+                          return new Promise<any>((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              resolve({
                                 id: index,
                                 name: file.name,
                                 size: file.size,
                                 type: file.type,
-                                data: arrayBuffer
-                              };
-                            })
-                          );
-                          
-                          // 创建事务并存储数据
-                          const transaction = db.transaction([storeName], 'readwrite');
-                          const store = transaction.objectStore(storeName);
-                          
-                          // 清除旧数据
-                          store.clear();
-                          
-                          // 同步添加所有文件数据
-                          fileDataArray.forEach(fileData => {
-                            store.add(fileData);
+                                data: reader.result
+                              });
+                            };
+                            reader.onerror = () => reject(reader.error);
+                            reader.readAsDataURL(file);
                           });
-                          
-                          // 等待事务完成
-                          transaction.oncomplete = () => {
-                            // 存储文件基本信息到 sessionStorage
-                            const fileInfo = files.map((file, index) => ({
-                              id: index,
-                              name: file.name,
-                              size: file.size,
-                              type: file.type
-                            }));
-                            
-                            sessionStorage.setItem('uploadedFilesInfo', JSON.stringify(fileInfo));
-                            
-                            // 跳转到详情页
-                            window.location.href = '/detail';
-                          };
-                          
-                          transaction.onerror = () => {
-                            console.error('事务失败:', transaction.error);
-                            alert('存储文件失败，请重试');
-                          };
-                          
-                        } catch (error) {
-                          console.error('处理文件失败:', error);
-                          alert('处理文件失败，请重试');
-                        }
-                      };
+                        })
+                      );
                       
-                      request.onerror = () => {
-                        alert('存储文件失败，请重试');
-                      };
+                      // 存储到 sessionStorage
+                      sessionStorage.setItem('uploadedFiles', JSON.stringify(fileDataArray));
+                      
+                      // 跳转到详情页
+                      window.location.href = '/detail';
                       
                     } catch (error) {
                       console.error('文件存储错误:', error);
