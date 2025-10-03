@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useState, useEffect } from "react";
 
 interface FileData {
   id: number;
@@ -20,7 +20,7 @@ export default function Detail() {
 
   const diagnosisText = "综合风险评分为高。建议进行进一步的活检或 PET-CT 检查以确认恶性肿瘤。鉴于其中一个结节的恶性程度较高，建议立即会诊。";
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setIsClient(true);
   }, []);
 
