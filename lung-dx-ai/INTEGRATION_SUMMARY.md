@@ -7,7 +7,7 @@
 #### 创建的文件
 - ✅ `src/app/api/analyze/route.ts` - AI 分析 API 路由
   - 接收图片 base64 数据
-  - 调用 SiliconFlow API
+  - 调用 Dify 工作流 API
   - 返回 AI 诊断结果
 
 #### API 功能
@@ -90,13 +90,13 @@
    ↓
 POST /api/analyze {imageData}
    ↓
-服务器端读取 SILICONFLOW_API_KEY
+服务器端读取 DIFY_API_KEY
    ↓
-调用 https://api.siliconflow.cn/v1/chat/completions
+调用 https://api.dify.ai/v1/chat-messages
    ↓
-发送提示词 + 图片
+发送工作流参数 + 图片
    ↓
-AI 模型分析图片
+Dify 工作流处理图片
    ↓
 返回诊断文本
    ↓
@@ -107,11 +107,11 @@ AI 模型分析图片
 
 ## 🔧 使用的技术
 
-### AI 模型
-- **提供商**: SiliconFlow
-- **模型**: Qwen2-VL-72B-Instruct
-- **类型**: 视觉语言模型（VLM）
-- **能力**: 图像理解、医学影像分析
+### AI 平台
+- **提供商**: Dify
+- **平台类型**: AI 工作流平台
+- **API 端点**: https://api.dify.ai/v1/chat-messages
+- **能力**: 图像理解、医学影像分析、工作流编排
 
 ### 前端技术
 - Next.js 14 App Router
@@ -128,7 +128,7 @@ AI 模型分析图片
 
 ### 必需配置
 ```env
-SILICONFLOW_API_KEY=your_api_key_here
+DIFY_API_KEY=app-2w47heGKxFjwHjdvpMeqWQXY
 ```
 
 ### 可选配置
@@ -170,7 +170,7 @@ SILICONFLOW_API_KEY=your_api_key_here
 ### 模型参数
 ```typescript
 {
-  model: 'Qwen/Qwen2-VL-72B-Instruct',
+  model: 'THUDM/GLM-4.1V-9B-Thinking',
   max_tokens: 2048,
   temperature: 0.3,
   top_p: 0.7,
@@ -271,9 +271,9 @@ npm start
 
 ## 📚 参考文档
 
-- [SiliconFlow API 文档](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
+- [Dify API 文档](https://docs.dify.ai/v/zh-hans/guides/application-publishing/developing-with-apis)
 - [Next.js API Routes](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)
-- [Qwen2-VL 模型介绍](https://github.com/QwenLM/Qwen2-VL)
+- [Dify 工作流文档](https://docs.dify.ai/v/zh-hans/guides/workflow)
 
 ## 🎉 集成完成！
 
@@ -282,6 +282,6 @@ npm start
 ---
 
 **集成时间**: 2025年10月
-**AI 模型**: Qwen2-VL-72B-Instruct via SiliconFlow
+**AI 平台**: Dify 工作流平台
 **集成状态**: ✅ 完成并可用
 

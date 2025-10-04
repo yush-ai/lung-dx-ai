@@ -1,14 +1,15 @@
 # AI 模型集成配置指南
 
-本项目已集成 SiliconFlow 的视觉语言模型（Qwen2-VL-72B-Instruct）来实现肺部影像的智能分析。
+本项目已集成 Dify 工作流来实现肺部影像的智能分析。
 
 ## 🔑 配置步骤
 
-### 1. 获取 API Key
+### 1. 获取 Dify API Key
 
-1. 访问 [SiliconFlow 官网](https://cloud.siliconflow.cn)
+1. 访问 [Dify 平台](https://dify.app)
 2. 注册账号并登录
-3. 在控制台获取您的 API Key
+3. 创建工作流应用
+4. 在应用的"访问 API"页面获取 API Key
 
 ### 2. 配置环境变量
 
@@ -19,13 +20,13 @@
 touch .env.local
 ```
 
-然后添加您的 API Key：
+然后添加您的 Dify API Key：
 
 ```env
-SILICONFLOW_API_KEY=your_api_key_here
+DIFY_API_KEY=app-2w47heGKxFjwHjdvpMeqWQXY
 ```
 
-**重要**: 将 `your_api_key_here` 替换为您实际的 API Key
+**重要**: 将 `app-2w47heGKxFjwHjdvpMeqWQXY` 替换为您实际的 Dify API Key
 
 ### 3. 安装依赖（如果需要）
 
@@ -44,7 +45,7 @@ npm run dev
 ### AI 分析流程
 
 1. **上传图片**: 用户在主页上传肺部医学影像（CT 或 X 光片）
-2. **AI 分析**: 系统自动调用 SiliconFlow API，发送图片给视觉语言模型
+2. **AI 分析**: 系统自动调用 Dify 工作流 API，发送图片给 AI 模型
 3. **生成诊断**: AI 模型分析图片并返回专业的医学诊断建议
 4. **显示结果**: 诊断结果显示在详情页的"诊断建议"区域
 
@@ -56,12 +57,12 @@ AI 模型会分析以下内容：
 - 恶性风险等级评估（低、中、高）
 - 专业的诊疗建议和随访建议
 
-## 📋 使用的模型
+## 📋 使用的平台
 
-- **模型名称**: Qwen2-VL-72B-Instruct
-- **模型类型**: 视觉语言模型（VLM）
-- **提供商**: SiliconFlow
-- **支持功能**: 图像理解、医学影像分析
+- **平台名称**: Dify
+- **平台类型**: AI 工作流平台
+- **API 端点**: https://api.dify.ai/v1/chat-messages
+- **支持功能**: 图像理解、医学影像分析、工作流编排
 
 ## 🔧 技术实现
 
@@ -91,6 +92,21 @@ POST /api/analyze
 }
 ```
 
+### Dify 工作流配置
+
+Dify 工作流接收以下参数：
+```json
+{
+  "inputs": {
+    "image": "data:image/png;base64,...",
+    "query": "请作为一名专业的放射科医生..."
+  },
+  "query": "请作为一名专业的放射科医生...",
+  "response_mode": "blocking",
+  "user": "lung-dx-user"
+}
+```
+
 ### 文件结构
 
 ```
@@ -117,24 +133,26 @@ src/
 1. **图片格式**: 支持 PNG、JPG、JPEG 格式
 2. **图片大小**: 建议单张图片不超过 10MB
 3. **分析数量**: 目前每次只分析第一张上传的图片
-4. **API 配额**: 根据您的 SiliconFlow 账户套餐限制
+4. **API 配额**: 根据您的 Dify 账户套餐限制
 
 ### 错误处理
 
 如果遇到以下错误：
 
-**"API Key 未配置"**
+**"Dify API Key 未配置"**
 - 检查 `.env.local` 文件是否存在
-- 确认 API Key 是否正确配置
+- 确认 DIFY_API_KEY 是否正确配置
 
 **"AI 分析失败"**
 - 检查网络连接
-- 确认 API Key 是否有效
+- 确认 Dify API Key 是否有效
 - 查看控制台日志了解详细错误信息
+- 确认 Dify 工作流应用是否已发布
 
 **"服务器错误"**
 - 查看服务器日志
-- 确认 SiliconFlow API 服务是否正常
+- 确认 Dify API 服务是否正常
+- 检查工作流配置是否正确
 
 ## 🎯 进阶配置
 
@@ -155,7 +173,7 @@ src/
 
 ```typescript
 {
-  model: 'Qwen/Qwen2-VL-72B-Instruct',
+  model: 'THUDM/GLM-4.1V-9B-Thinking',
   max_tokens: 2048,      // 最大生成长度
   temperature: 0.3,      // 创造性（0-1）
   top_p: 0.7            // 采样概率
@@ -168,8 +186,8 @@ src/
 
 ## 📚 参考资源
 
-- [SiliconFlow 文档](https://docs.siliconflow.cn/)
-- [API 参考](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
+- [Dify 官方文档](https://docs.dify.ai/)
+- [Dify API 参考](https://docs.dify.ai/v/zh-hans/guides/application-publishing/developing-with-apis)
 - [Next.js API Routes](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)
 
 ## 💡 技术支持
@@ -177,6 +195,7 @@ src/
 如有问题，请：
 1. 查看控制台错误日志
 2. 检查浏览器开发者工具的 Network 面板
-3. 参考 SiliconFlow 官方文档
-4. 提交 Issue 到项目仓库
+3. 参考 Dify 官方文档
+4. 确认 Dify 工作流应用配置是否正确
+5. 提交 Issue 到项目仓库
 

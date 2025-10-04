@@ -1,16 +1,38 @@
 "use client";
 
 // import Link from "next/link"; // 注释掉 Next.js Link 组件以避免 SSR 问题
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStage, setAnalysisStage] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [estimatedTime, setEstimatedTime] = useState(120); // 预估 2 分钟
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 倒计时和进度条效果
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isAnalyzing) {
+      interval = setInterval(() => {
+        setTimeElapsed(prev => {
+          const newTime = prev + 1;
+          // 根据时间更新进度条
+          const progressPercent = Math.min((newTime / estimatedTime) * 100, 95);
+          setProgress(progressPercent);
+          return newTime;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isAnalyzing, estimatedTime]);
+
   const handleFileSelect = (selectedFiles: FileList | null) => {
-    if (!selectedFiles) return;
+    if (!selectedFiles || isAnalyzing) return; // 分析中不允许添加文件
     
     const newFiles = Array.from(selectedFiles).filter(file => {
       // 支持的文件格式
@@ -27,7 +49,9 @@ export default function Home() {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(true);
+    if (!isAnalyzing) {
+      setIsDragging(true);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -38,15 +62,32 @@ export default function Home() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    handleFileSelect(e.dataTransfer.files);
+    if (!isAnalyzing) {
+      handleFileSelect(e.dataTransfer.files);
+    }
   };
 
   const handleBrowseClick = () => {
-    fileInputRef.current?.click();
+    if (!isAnalyzing) {
+      fileInputRef.current?.click();
+    }
   };
 
   const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    if (!isAnalyzing) {
+      setFiles(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const cancelAnalysis = () => {
+    if (abortController) {
+      abortController.abort();
+    }
+    setIsAnalyzing(false);
+    setProgress(0);
+    setTimeElapsed(0);
+    setAnalysisStage('');
+    setAbortController(null);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -56,6 +97,13 @@ export default function Home() {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="bg-[#f6f7f8] dark:bg-[#101a22] font-[Inter,sans-serif] text-gray-800 dark:text-gray-200">
       <div className="relative flex h-screen flex-col">
@@ -87,20 +135,33 @@ export default function Home() {
             
             <div className="bg-white dark:bg-[#101a22] rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
               <div 
-                className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-colors ${
-                  isDragging 
-                    ? 'border-[#138aec] bg-[#138aec]/5' 
-                    : 'border-gray-300 dark:border-gray-600 hover:border-[#138aec] dark:hover:border-[#138aec]'
+                className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-colors ${
+                  isAnalyzing 
+                    ? 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed opacity-60' 
+                    : isDragging 
+                      ? 'border-[#138aec] bg-[#138aec]/5 cursor-pointer' 
+                      : 'border-gray-300 dark:border-gray-600 hover:border-[#138aec] dark:hover:border-[#138aec] cursor-pointer'
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={handleBrowseClick}
               >
-                <div className="text-5xl text-gray-400 dark:text-gray-500 mb-3">📁</div>
-                <p className="mt-3 font-semibold text-gray-800 dark:text-gray-200">将您的文件拖放到此处</p>
+                <div className="text-5xl text-gray-400 dark:text-gray-500 mb-3">
+                  {isAnalyzing ? '🔒' : '📁'}
+                </div>
+                <p className="mt-3 font-semibold text-gray-800 dark:text-gray-200">
+                  {isAnalyzing ? '分析进行中，请稍后...' : '将您的文件拖放到此处'}
+                </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">或</p>
-                <button className="mt-3 flex items-center justify-center rounded-md h-9 px-4 bg-[#138aec]/10 text-[#138aec] text-sm font-bold leading-normal transition-colors hover:bg-[#138aec]/20 cursor-pointer">
+                <button 
+                  disabled={isAnalyzing}
+                  className={`mt-3 flex items-center justify-center rounded-md h-9 px-4 text-sm font-bold leading-normal transition-colors ${
+                    isAnalyzing 
+                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                      : 'bg-[#138aec]/10 text-[#138aec] hover:bg-[#138aec]/20 cursor-pointer'
+                  }`}
+                >
                   <span className="truncate">浏览文件</span>
                 </button>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">支持 DICOM (.dcm)、PNG、JPG 格式</p>
@@ -113,12 +174,17 @@ export default function Home() {
                 accept=".dcm,.dicom,.png,.jpg,.jpeg"
                 className="hidden"
                 onChange={(e) => handleFileSelect(e.target.files)}
+                disabled={isAnalyzing}
               />
               
               {files.length > 0 && (
                 <div className="mt-4 max-h-32 overflow-y-auto space-y-2 pr-2">
                   {files.map((file, index) => (
-                    <div key={index} className="flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
+                    <div key={index} className={`flex justify-between items-center p-2 rounded-lg transition-colors ${
+                      isAnalyzing 
+                        ? 'bg-gray-100 dark:bg-gray-800/30 opacity-60' 
+                        : 'bg-gray-50 dark:bg-gray-800/50'
+                    }`}>
                       <div className="flex items-center gap-2">
                         <span className="text-gray-500 text-base">
                           {file.name.toLowerCase().endsWith('.dcm') || file.name.toLowerCase().endsWith('.dicom') ? '🏥' : '📄'}
@@ -131,11 +197,16 @@ export default function Home() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-green-600 dark:text-green-400">已选择</span>
                         <button 
+                          disabled={isAnalyzing}
                           onClick={(e) => {
                             e.stopPropagation();
                             removeFile(index);
                           }}
-                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer"
+                          className={`transition-colors ${
+                            isAnalyzing 
+                              ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
+                              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer'
+                          }`}
                         >
                           <span className="text-base">✕</span>
                         </button>
@@ -146,6 +217,68 @@ export default function Home() {
               )}
             </div>
             
+            {/* 分析进度显示 */}
+            {isAnalyzing && (
+              <div className="bg-white dark:bg-[#101a22] rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <div className="text-center mb-4">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <svg className="animate-spin h-6 w-6 text-[#138aec]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI 分析进行中</h3>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{analysisStage}</p>
+                </div>
+                
+                {/* 进度条 */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <span>分析进度</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-[#138aec] h-2 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+                
+                {/* 时间信息 */}
+                <div className="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  <div className="flex items-center gap-1">
+                    <span>⏱️</span>
+                    <span>已用时: {formatTime(timeElapsed)}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>⏳</span>
+                    <span>预估: {formatTime(estimatedTime)}</span>
+                  </div>
+                </div>
+                
+                {/* 取消按钮 */}
+                <div className="flex justify-center mb-4">
+                  <button
+                    onClick={cancelAnalysis}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span className="text-sm font-medium">取消分析</span>
+                  </button>
+                </div>
+                
+                {/* 阶段提示 */}
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    💡 <strong>正在处理中...</strong> AI 正在仔细分析您的肺部影像，这可能需要 1-2 分钟时间。您可以随时取消分析。
+                  </p>
+                </div>
+              </div>
+            )}
+            
             <div className="flex justify-center mt-6">
               <button 
                 disabled={files.length === 0 || isAnalyzing}
@@ -155,9 +288,17 @@ export default function Home() {
                       // 检查是否在客户端环境
                       if (typeof window === 'undefined') return;
                       
+                      // 创建 AbortController
+                      const controller = new AbortController();
+                      setAbortController(controller);
+                      
                       setIsAnalyzing(true);
+                      setProgress(0);
+                      setTimeElapsed(0);
+                      setAnalysisStage('正在准备文件...');
                       
                       // 将文件转换为 base64
+                      setAnalysisStage('正在处理图像文件...');
                       const fileDataArray = await Promise.all(
                         files.map(async (file, index) => {
                           return new Promise<any>((resolve, reject) => {
@@ -177,6 +318,11 @@ export default function Home() {
                         })
                       );
                       
+                      // 检查是否被取消
+                      if (controller.signal.aborted) {
+                        return;
+                      }
+                      
                       // 存储文件数据到 sessionStorage
                       sessionStorage.setItem('uploadedFiles', JSON.stringify(fileDataArray));
                       
@@ -184,6 +330,14 @@ export default function Home() {
                       const firstImageFile = fileDataArray.find(f => f.type.startsWith('image/'));
                       
                       if (firstImageFile) {
+                        setAnalysisStage('正在上传文件到 AI 服务器...');
+                        setProgress(10);
+                        
+                        // 检查是否被取消
+                        if (controller.signal.aborted) {
+                          return;
+                        }
+                        
                         // 调用 AI 分析 API
                         const response = await fetch('/api/analyze', {
                           method: 'POST',
@@ -192,16 +346,28 @@ export default function Home() {
                           },
                           body: JSON.stringify({
                             imageData: firstImageFile.data
-                          })
+                          }),
+                          signal: controller.signal
                         });
                         
                         if (!response.ok) {
                           throw new Error('AI 分析失败');
                         }
                         
+                        setAnalysisStage('AI 正在分析肺部影像...');
+                        setProgress(50);
+                        
                         const result = await response.json();
                         
+                        // 检查是否被取消
+                        if (controller.signal.aborted) {
+                          return;
+                        }
+                        
                         if (result.success) {
+                          setAnalysisStage('正在生成诊断报告...');
+                          setProgress(90);
+                          
                           // 存储 AI 诊断结果
                           sessionStorage.setItem('aiDiagnosis', result.diagnosis);
                           
@@ -216,19 +382,41 @@ export default function Home() {
                             console.log(`提示词: ${result.usage.prompt_tokens} | 生成: ${result.usage.completion_tokens} | 总计: ${result.usage.total_tokens}`);
                           }
                           console.log('');
+                          
+                          setProgress(100);
+                          setAnalysisStage('分析完成！正在跳转...');
+                          
+                          // 延迟一下让用户看到完成状态
+                          setTimeout(() => {
+                            if (!controller.signal.aborted) {
+                              window.location.href = '/detail';
+                            }
+                          }, 1000);
                         } else {
                           console.error('AI 分析失败:', result.error);
                           // 即使 AI 分析失败，也继续跳转，使用默认诊断文本
+                          setProgress(100);
+                          setAnalysisStage('分析完成！正在跳转...');
+                          setTimeout(() => {
+                            if (!controller.signal.aborted) {
+                              window.location.href = '/detail';
+                            }
+                          }, 1000);
                         }
                       }
                       
-                      // 跳转到详情页
-                      window.location.href = '/detail';
-                      
                     } catch (error) {
+                      if (error instanceof Error && error.name === 'AbortError') {
+                        console.log('分析已被用户取消');
+                        return;
+                      }
                       console.error('处理错误:', error);
                       alert('分析失败，请重试。如果问题持续，请检查 API 配置。');
                       setIsAnalyzing(false);
+                      setProgress(0);
+                      setTimeElapsed(0);
+                      setAnalysisStage('');
+                      setAbortController(null);
                     }
                   }
                 }}
